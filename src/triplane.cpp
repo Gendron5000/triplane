@@ -1815,7 +1815,7 @@ void main_engine(void) {
         if (solo_mode == -1)
             terrain_to_screen();
         else {
-            solo_do_all();
+            //solo_do_all();
             terrain_to_screen();
         }
 
