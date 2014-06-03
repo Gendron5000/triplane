@@ -313,6 +313,7 @@ extern int mc_bomb[16];
 extern int mc_roll[16];
 extern int mc_guns[16];
 extern int mc_power[16];
+extern int mc_turbo[16];
 
 extern int main_version;
 extern int sub_version;

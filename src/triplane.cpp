@@ -1,7 +1,7 @@
 /* 
  * Triplane Classic - a side-scrolling dogfighting game.
  * Copyright (C) 1996,1997,2009  Dodekaedron Software Creations Oy
- *
+ * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -330,6 +330,7 @@ int mc_bomb[16];
 int mc_roll[16];
 int mc_guns[16];
 int mc_power[16];
+int mc_turbo[16];
 
 int new_mc_up[16];
 int new_mc_down[16];
@@ -343,6 +344,7 @@ int new_mc_power[16];
 // If it is 1, the player won't start until
 // throttle button is pressed, even with reverse throttle.
 int power_break_active[16];
+int new_mc_turbo[16];
 
 int main_version;
 int sub_version;
@@ -408,6 +410,7 @@ extern void do_it_shots(void);
 extern void init_mission(int country, int number);
 extern void do_mekan(void);
 
+extern void do_agent(int number);
 extern void do_ai(int number);
 extern void ai_turn_down(int number);
 extern void ai_turn_up(int number);
@@ -809,6 +812,7 @@ void init_player(int l, int pommit) {
     player_x_speed[l] = 0;
     player_y_speed[l] = 0;
     power_break_active[l] = 1;
+    controls_turbo[l] = 0;
 
 
 
@@ -934,6 +938,7 @@ void controls(void) {
         mc_power[l] = new_mc_power[l];
         mc_bomb[l] = new_mc_bomb[l];
         mc_guns[l] = new_mc_guns[l];
+        mc_turbo[l] = new_mc_turbo[l];
 
 
 
@@ -1000,10 +1005,15 @@ void controls(void) {
             if (hangarmenu_active[l])
                 continue;
 
-            if (computer_active[l]) {
+            if (computer_active[l] == 1) {
                 do_ai(l);
                 continue;
             }
+			else
+			{
+				//do_agent(l);
+				//continue;
+			}
 
             if (l > 7)
                 continue;
@@ -1020,6 +1030,7 @@ void controls(void) {
                 controls_up[l] = 0;
 
             controls_power[l] = mc_power[l];
+			controls_turbo[l] = mc_turbo[l];
 
 
 
@@ -1190,9 +1201,7 @@ void controls(void) {
 
                 new_mc_roll[l] = 0;
                 if ((playing_solo ? key[roster[config.player_number[solo_country]].roll] : key[player_keys[l].roll])) {
-
                     new_mc_roll[l] = 1;
-
 
                 }
 
@@ -1202,7 +1211,15 @@ void controls(void) {
                 if ((playing_solo ? key[roster[config.player_number[solo_country]].guns] : key[player_keys[l].guns])) {
                     new_mc_guns[l] = 1;
 
-                }
+				}
+
+                new_mc_turbo[l] = 0;
+
+                if ((playing_solo ? key[roster[config.player_number[solo_country]].turbo] : key[player_keys[l].turbo])) {
+                    new_mc_turbo[l] = 1;
+
+                
+               }
             }
         }
 
@@ -1539,7 +1556,10 @@ void main_engine(void) {
             return;
 
         }
+
+    	init_vesa("PALET5");
     }
+
 
     if (playing_solo) {
         solo_failed = 0;
@@ -1556,7 +1576,7 @@ void main_engine(void) {
         }
 
     }
-
+	init_vesa("PALET5");
     if (current_mode == SVGA_MODE) {
 
         tyhjaa_vircr();
@@ -1796,7 +1816,7 @@ void main_engine(void) {
             terrain_to_screen();
         else {
             solo_do_all();
-            solo_terrain_to_screen();
+            terrain_to_screen();
         }
 
         hangarmenu_handle();
@@ -3383,6 +3403,7 @@ void init_data(void) {
         mc_roll[l] = 0;
         mc_guns[l] = 0;
         mc_power[l] = 0;
+		mc_turbo[l] = 0;
 
         new_mc_up[l] = 0;
         new_mc_down[l] = 0;
@@ -3390,6 +3411,7 @@ void init_data(void) {
         new_mc_roll[l] = 0;
         new_mc_guns[l] = 0;
         new_mc_power[l] = 0;
+        new_mc_turbo[l] = 0;
 
 
         roll_key_down[l] = 0;

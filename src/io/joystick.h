@@ -37,7 +37,7 @@ struct joystick_action {
 struct joystick_configuration {
     /* "brake" action presses up and down simultaneously */
     /* if roll.type = 0, use autoroll */
-    joystick_action up, down, roll, power, guns, bombs, brake;
+    joystick_action up, down, roll, power, guns, bombs, brake, turbo;
 };
 extern joystick_configuration joystick_config[2];
 

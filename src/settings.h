@@ -34,6 +34,7 @@ struct keymap {
     int32_t power;
     int32_t guns;
     int32_t bombs;
+    int32_t turbo;
 };
 
 extern keymap player_keys[4];
@@ -77,6 +78,8 @@ struct rosteri {
     int32_t power;
     int32_t guns;
     int32_t bombs;
+    int32_t turbo;
+
 };
 
 struct dos_roster {
@@ -108,6 +111,7 @@ struct dos_roster {
     uint8_t power;
     uint8_t guns;
     uint8_t bombs;
+	uint8_t turbo;
 };
 
 

@@ -60,6 +60,7 @@ void start_it_shot(int x, int y, int angle);
 void do_it_shots(void);
 void start_itgun_explosion(int number);
 
+void do_agent(int number);
 void do_ai(int number);
 void ai_turn_down(int number);
 void ai_turn_up(int number);
@@ -1236,6 +1237,646 @@ void ai_turnminus(int number) {
 
     controls_up[number] = flaggy;
     controls_down[number] = flaggy ? 0 : 1;
+}
+
+void do_agent(int number)
+{
+    int xdistance, ydistance;
+    int distance_enemy[16], angle_enemy[16], angle_difference[16];
+    int flaggy;
+    int trueangle;
+    int l;
+
+    if (!player_exists[number])
+        return;
+	
+	if (computer_active[number] != 2)
+		return;
+
+    for (flaggy = 0; flaggy < 16; flaggy++) {
+        if (flaggy == number)
+            continue;
+
+        if (!player_exists[flaggy])
+            continue;
+
+        //calculate_difference(player_x[number]>>8,player_y_8[number]>>8,(player_x[flaggy]>>8),(player_y[flaggy]>>8),&distance_enemy[flaggy],&angle_enemy[flaggy]);     
+        calculate_difference(player_x_8[number], player_y_8[number], ((player_x[flaggy] + (player_x_speed[flaggy] >> 7)) >> 8),
+                             ((player_y[flaggy] - (player_y_speed[flaggy] >> 7)) >> 8), &distance_enemy[flaggy], &angle_enemy[flaggy]);
+
+        angle_difference[flaggy] = abs((player_angle[number] >> 8) - angle_enemy[flaggy]);
+        if (angle_difference[flaggy] > 180) {
+            angle_difference[flaggy] = abs(angle_difference[flaggy] - 360);
+        }
+    }
+
+
+    if ((player_angle[number] <= 69120) && (player_angle[number] > 23040))
+        going_left = 1;
+    else
+        going_left = 0;
+
+    if ((player_angle[number] < 46080)) {
+        going_up = player_angle[number];
+        if (going_up > 23040)
+            going_up = 46080 - going_up;
+    } else
+        going_up = 0;
+
+    controls_down[number] = 0;
+    controls_up[number] = 0;
+
+    if (player_angle[number] >= 57600 && player_angle[number] <= 80640)
+        controls_power[number] = 0;
+    else
+        controls_power[number] = 1;
+
+
+    switch (current_mission[number]) {
+    case AIM_TAKEOFF:
+        if ((player_y_8[number]) + 40 > terrain_level[player_x_8[number]])
+            mission_phase[number] = 0;
+        else
+            current_mission[number] = AIM_NOMISSION;
+
+        ai_evade_terrain(number);
+        break;
+
+    case AIM_LAND:
+        switch (mission_phase[number]) {
+        case 0:
+            if ((player_upsidedown[number] && (!going_left)) || (!player_upsidedown[number] && (going_left)))
+                if (!player_rolling[number])
+                    player_rolling[number] = 1;
+
+
+
+
+            if (going_left) {
+                xdistance = -((leveldata.airfield_x[player_tsides[number]] + (leveldata.airfield_lenght[player_tsides[number]] >> 1)) - player_x_8[number]);
+
+            } else {
+                xdistance = ((leveldata.airfield_x[player_tsides[number]] + (leveldata.airfield_lenght[player_tsides[number]] >> 1)) - player_x_8[number]);
+
+            }
+
+            ydistance = leveldata.airfield_y[player_tsides[number]] - player_y_8[number];
+
+            if (xdistance < -9) {
+                current_mission[number] = AIM_TAKEOFF;
+                mission_phase[number] = 0;
+
+
+            }
+
+            int initial_turn;
+            int mass;
+            int turn_temp;
+            mass = plane_mass[number];
+            mass += player_ammo[number] / 10;
+            if (plane_bombs[number] != 6)
+                mass += player_bombs[number] * 12;
+            else
+                mass += player_bombs[number] * 10;
+
+            mass += player_gas[number] / 160;
+
+            initial_turn = (plane_manover[number] << 8) / (mass + 200);
+            turn_temp = 1 + (((player_speed[number] - 768) / 20) >> 8);
+            if (!turn_temp)
+                turn_temp = 1;
+            initial_turn /= turn_temp;
+
+            if (going_left) {
+                if (player_angle[number] >= ((180 + HIT_ANGLE) << 8)) {
+                    controls_up[number] = 1;
+                    controls_down[number] = 0;
+
+                }
+            } else {
+                if ((player_angle[number] <= ((360 - HIT_ANGLE) << 8)) && player_angle[number] > 50000) {
+                    controls_up[number] = 1;
+                    controls_down[number] = 0;
+
+                }
+            }
+
+
+
+            if (ydistance > (xdistance / 3)) {
+                if (going_left) {
+                    if (player_angle[number] < ((180 + HIT_ANGLE) << 8) - initial_turn) {
+                        controls_up[number] = 0;
+                        controls_down[number] = 1;
+
+                    }
+                } else {
+                    if ((player_angle[number] > ((360 - HIT_ANGLE) << 8) + initial_turn) || player_angle[number] < 23041) {
+                        controls_up[number] = 0;
+                        controls_down[number] = 1;
+
+                    }
+
+                }
+
+                if (player_speed[number] < 850) {
+                    controls_power[number] = 1;
+
+                } else {
+                    controls_power[number] = 0;
+                    if (!controls_up[number] && !controls_down[number]) {
+                        controls_up[number] = 1;
+                        controls_down[number] = 1;
+
+
+                    }
+
+                }
+
+
+
+            } else {
+                if (going_left) {
+                    if (player_angle[number] > ((180 - TAIL_HIT_ANGLE) << 8)) {
+                        controls_up[number] = 1;
+                        controls_down[number] = 0;
+
+                    }
+                } else {
+                    if (player_angle[number] < ((TAIL_HIT_ANGLE) << 8) || player_angle[number] > 69119) {
+                        controls_up[number] = 1;
+                        controls_down[number] = 0;
+
+                    }
+
+                }
+
+                if (player_speed[number] < 2048) {
+                    controls_power[number] = 1;
+
+                } else {
+                    controls_power[number] = 0;
+
+                }
+
+
+
+
+            }
+
+
+            if (player_on_airfield[number]) {
+                mission_phase[number] = 1;
+
+            }
+
+            break;
+
+        case 1:
+
+            controls_up[number] = 1;
+            controls_down[number] = 1;
+            controls_power[number] = 0;
+
+            break;
+
+        }
+
+
+
+        break;
+
+
+    case AIM_IMMELMAN:
+        switch (mission_phase[number]) {
+        case 0:
+            mission_phase[number] = 1;
+            controls_power[number] = 1;
+            controls_up[number] = 0;
+            controls_down[number] = 1;
+            mission_target[number] = going_left ? 0 : 1;
+            break;
+
+        case 1:
+            if (player_speed[number] > 2700 && (player_y_8[number]) > 100) {
+                mission_phase[number] = 2;
+
+            }
+            if (player_speed[number] < 4000)
+                controls_power[number] = 1;
+            else
+                controls_power[number] = 0;
+
+            controls_up[number] = 0;
+            controls_down[number] = 0;
+
+            if (going_left && (player_angle[number] < (190 * 256)))
+                controls_down[number] = 1;
+            else if ((!going_left) && (player_angle[number] > (350 * 256) || player_angle[number] < (90 * 256)))
+                controls_down[number] = 1;
+            break;
+
+        case 2:
+            if (mission_target[number] == 0) {
+                if (!going_left && player_angle[number] > 69120) {
+                    current_mission[number] = AIM_NOMISSION;
+                    break;
+                }
+            } else {
+                if (going_left && player_angle[number] > 46080) {
+                    current_mission[number] = AIM_NOMISSION;
+                    break;
+                }
+            }
+
+            controls_power[number] = 1;
+            controls_up[number] = 1;
+            controls_down[number] = 0;
+
+            break;
+
+
+        }
+
+
+        break;
+
+    case AIM_SPLITS:
+        switch (mission_phase[number]) {
+        case 0:
+            if ((player_upsidedown[number] && (going_left)) || (!player_upsidedown[number] && (!going_left)))
+                if (!player_rolling[number])
+                    player_rolling[number] = 1;
+            mission_phase[number] = 1;
+            controls_power[number] = 0;
+            mission_target[number] = going_left ? 0 : 1;
+            ai_turn_up(number);
+            break;
+
+        case 1:
+            if (!player_rolling[number] && player_speed[number] < 1000) {
+                mission_phase[number] = 2;
+                controls_up[number] = 1;
+                controls_down[number] = 0;
+            }
+
+            if (going_up) {
+                controls_up[number] = 1;
+                controls_down[number] = 1;
+            } else {
+                ai_turn_up(number);
+
+            }
+
+            controls_power[number] = 0;
+            break;
+
+        case 2:
+            if (mission_target[number] == 0) {
+                if (!going_left && player_angle[number] > 0) {
+                    mission_phase[number] = 3;
+                    break;
+                }
+            } else {
+                if (going_left && player_angle[number] < 46080) {
+                    mission_phase[number] = 3;
+                    break;
+                }
+            }
+            controls_up[number] = 1;
+            controls_down[number] = 0;
+            controls_power[number] = 0;
+
+            break;
+
+        case 3:
+            if (going_up < 750)
+                ai_turn_up(number);
+            else
+                current_mission[number] = AIM_NOMISSION;
+            break;
+
+        }
+
+        break;
+
+    case AIM_FLY_LEVEL:
+
+        break;
+
+
+
+
+    case AIM_BOMB_STRUCTURE:
+
+        break;
+
+    case AIM_CHASE_PLANE:
+        if ((!player_ammo[number]) || distance_enemy[mission_target[number]] > AIM_GIVEUPFIGHT_DISTANCE || !plane_present[mission_target[number]]) {
+            current_mission[number] = AIM_NOMISSION;
+
+        } else {
+            distances[number] = distance_enemy[mission_target[number]];
+            angles[number] = angle_enemy[mission_target[number]];
+
+            trueangle = (player_angle[number] >> 8) - angle_enemy[mission_target[number]];
+            if (abs(trueangle) > 180) {
+                if (trueangle < 0) {
+                    trueangle += 360;
+                } else {
+                    trueangle -= 360;
+
+                }
+            }
+
+
+            if (trueangle > 0) {
+
+                ai_turnminus(number);
+            }
+            if (trueangle < 0) {
+
+                ai_turnplus(number);
+            }
+        }
+        /// nysv„yslause
+
+        if (controls_up[number] && player_speed[number] < (1800)) {
+
+            if (going_up && (player_angle[number] > 32000 || player_angle[number] < 14080)) {
+                ai_turn_down(number);
+
+            }
+
+
+        } else if (controls_up[number] && player_speed[number] < (2350 + (player_bombs[number] << 6))) {
+
+            if (!going_up) {
+                controls_up[number] = 0;
+                controls_down[number] = 0;
+
+            }
+
+        }
+
+	case AIM_HEAD_FOR_HOME:
+	printf("HEAD F H\n");
+        if (current_mission[number] != AIM_CHASE_PLANE)
+            for (l = 0; l < 16; l++) 
+			{
+                if (l == number)
+                    continue;
+
+                if (!plane_present[l])
+                    continue;
+
+                if (player_sides[number] == player_sides[l])
+                    continue;
+
+                if (player_ammo[number] && distance_enemy[l] < AI_ATTACK_DISTANCE) {
+                    current_mission[number] = AIM_CHASE_PLANE;
+                    mission_target[number] = l;
+
+				}
+            }
+
+    xdistance = -((leveldata.airfield_x[player_tsides[number]] + (leveldata.airfield_lenght[player_tsides[number]] >> 1)) - player_x_8[number]);
+
+			printf("py=%u\n", player_x_speed[number] );
+			printf("ay=%d\n", player_angle[number]);
+
+		if (player_x_speed[number] > 110000)
+		{
+			controls_power[number] = 0;
+		}
+		else if(player_x_speed[number] < 80000)
+		{
+			controls_power[number] = 1;
+		}
+
+		if (player_y_8[number] < leveldata.airfield_y[player_tsides[number]] - 10)
+		{
+			if (player_angle[number] < 200000  && player_angle[number] > 89000)
+			{
+				printf("less\n");
+				controls_up[number] = 0;
+				controls_down[number] = 1;
+			}
+		}
+		else if (player_y_8[number] > leveldata.airfield_y[player_tsides[number]] + 10)
+		{
+			printf("more\n");
+			controls_up[number] = 1;
+			controls_down[number] = 0;
+		}
+		else
+		{
+			controls_up[number] = 0;
+			controls_down[number] = 0;
+		}
+
+        ai_evade_terrain(number);
+
+		break;
+
+    case AIM_NOMISSION:
+        if (current_mission[number] != AIM_CHASE_PLANE)
+            for (l = 0; l < 16; l++) {
+                if (l == number)
+                    continue;
+
+                if (!plane_present[l])
+                    continue;
+
+                if (player_sides[number] == player_sides[l])
+                    continue;
+
+                if (player_ammo[number] && distance_enemy[l] < AI_ATTACK_DISTANCE) {
+                    current_mission[number] = AIM_CHASE_PLANE;
+                    mission_target[number] = l;
+
+
+                }
+            }
+
+        if ((player_x_8[number] < (120 + ((player_speed[number]) / 40)) && going_left) ||
+            (player_x_8[number] > (2280 - ((player_speed[number]) / 40)) && !going_left)) {
+            if ((wide_terrain_level[player_x_8[number]] - (player_y_8[number])) > ((player_y_8[number]) + 15))
+                current_mission[number] = AIM_SPLITS;
+            else
+                current_mission[number] = AIM_IMMELMAN;
+            mission_phase[number] = 0;
+
+        } else if ((player_upsidedown[number] && (!going_left)) || (!player_upsidedown[number] && (going_left)))
+            if (!player_rolling[number])
+                player_rolling[number] = 1;
+
+		if (player_bombs[number] == 0)
+		{
+        	if (leveldata.plane_direction[player_tsides[number]]) 
+			{
+            	if (going_left) 
+				{
+                	xdistance = -((leveldata.airfield_x[player_tsides[number]] + (leveldata.airfield_lenght[player_tsides[number]] >> 1)) - player_x_8[number]);
+            	} 
+				else 
+				{
+                	xdistance = 1500;
+            	}
+        	} 
+			else 
+			{
+            	if (!going_left) 
+				{
+               		xdistance = ((leveldata.airfield_x[player_tsides[number]] + (leveldata.airfield_lenght[player_tsides[number]] >> 1)) - player_x_8[number]);
+            	} 
+				else
+				{
+                	xdistance = 1500;
+				}
+			}
+
+        	if ((xdistance < 1500) && (xdistance > 100))
+			{
+				current_mission[number] = AIM_HEAD_FOR_HOME;
+			}
+		}
+
+        ai_evade_terrain(number);
+
+        break;
+
+    case AIM_EVADE_TERRAIN:
+
+        if ((player_x[number] < (80 + (player_speed[number] >> 5)) * 256 && going_left) ||
+            (player_x[number] > (2320 - (player_speed[number] >> 5)) * 256 && !going_left)) {
+            if ((wide_terrain_level[player_x_8[number]] - (player_y_8[number])) > ((player_y_8[number]) + 15))
+                current_mission[number] = AIM_SPLITS;
+            else
+                current_mission[number] = AIM_IMMELMAN;
+            mission_phase[number] = 0;
+
+            break;
+        } else if ((player_upsidedown[number] && (!going_left)) || (!player_upsidedown[number] && (going_left)))
+            if (!player_rolling[number])
+                player_rolling[number] = 1;
+
+        ai_evade_terrain(number);
+
+        mission_phase[number]++;
+        if (mission_phase[number] >= 24)
+            current_mission[number] = AIM_NOMISSION;
+        break;
+
+
+    }
+
+
+    if ((player_on_airfield[number] - 1) == player_tsides[number]
+        && !player_speed[number] && (!player_gas[number] || current_mission[number] == AIM_LAND)) {
+        plane_wants_in[number] = 1;
+
+    }
+
+    //if ((!player_bombs[number] && !player_ammo[number]) || player_gas[number] < 500 || current_mission[number] == AIM_HEAD_FOR_HOME) {
+	if (player_bombs[number] == 0 || player_gas[number] < 700 || current_mission[number] == AIM_LAND)
+	{
+
+        if (leveldata.plane_direction[player_tsides[number]]) {
+            if (going_left) {
+
+                xdistance = -((leveldata.airfield_x[player_tsides[number]] + (leveldata.airfield_lenght[player_tsides[number]] >> 1)) - player_x_8[number]);
+            } else {
+                xdistance = 600;
+
+            }
+        } else {
+            if (!going_left) {
+                xdistance = ((leveldata.airfield_x[player_tsides[number]] + (leveldata.airfield_lenght[player_tsides[number]] >> 1)) - player_x_8[number]);
+            } else {
+                xdistance = 600;
+
+            }
+        }
+
+        ydistance = leveldata.airfield_y[player_tsides[number]] - player_y_8[number];
+
+
+        if ((xdistance < 600) && (xdistance > 100) && (ydistance + 5 > (xdistance / 3)) && (ydistance - 5 < (xdistance / 3))) {
+		printf("FSDA\n");
+
+            //if (player_speed[number] < 2000 || (ydistance > 130) || (ydistance - (player_speed[number] >> 6)) > 0) {
+            if ((ydistance > 130) || (ydistance - (player_speed[number] >> 6)) > 0) {
+                current_mission[number] = AIM_LAND;
+				printf("rEWREW\n");
+                mission_phase[number] = 0;
+            }
+        }
+
+
+
+    }
+
+
+    if (going_up && player_y[number] <= 5120)
+        ai_turn_down(number);
+
+
+    if (player_bombs[number] && !in_closing[number]) {
+
+        if (((player_angle[number] <= 23040 || player_angle[number] >= 69120) && !player_upsidedown[number]) ||
+            ((player_angle[number] >= 23040 && player_angle[number] <= 69120) && player_upsidedown[number]))
+            ai_do_bombing(number);
+
+    }
+
+
+
+
+    if (player_spinning[number]) {
+        if (!player_rolling[number])
+            player_rolling[number] = 1;
+    }
+
+    if (spinning_remaining[number]) {
+        spinning_remaining[number]--;
+        if (!player_rolling[number])
+            player_rolling[number] = 1;
+    }
+
+    if (plane_present[number] && player_ammo[number] && (player_last_shot[number] > SHOTS_RATE)) {
+        for (flaggy = 0; flaggy < 16; flaggy++) {
+            if (flaggy == number)
+                continue;
+
+            if (!plane_present[flaggy])
+                continue;
+
+            if (player_sides[number] != player_sides[flaggy])
+                continue;
+
+
+            if (distance_enemy[flaggy] < (SHOT_AT_RANGE - 20) && angle_difference[flaggy] < 8) {
+                return;
+
+            }
+        }
+
+        for (flaggy = 0; flaggy < 16; flaggy++) {
+
+            if (!plane_present[flaggy])
+                continue;
+
+            if (player_sides[number] == player_sides[flaggy])
+                continue;
+
+            if (distance_enemy[flaggy] < SHOT_AT_RANGE && angle_difference[flaggy] < SHOT_AT_ANGLE) {
+
+                start_shot(number);
+                break;
+            }
+        }
+    }
 }
 
 

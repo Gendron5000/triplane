@@ -196,8 +196,8 @@ static int init_mode(int new_mode, const char *paletname) {
 
     if (!draw_with_vircr_mode)
         mode_flags |= SDL_ANYFORMAT;
-    if (wantfullscreen)
-        mode_flags |= SDL_FULLSCREEN;
+    //if (wantfullscreen)
+     //   mode_flags |= SDL_FULLSCREEN;
 
     if (draw_with_vircr_mode && pixel_multiplier > 1)
         wfree(vircr);

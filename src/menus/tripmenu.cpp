@@ -808,8 +808,8 @@ void roster_menu(void) {
                 frost->printf(125, 93, "Up [%s]\nDown [%s]\nRoll [%s]",
                               SDL_GetKeyName((SDLKey) roster[number].up), SDL_GetKeyName((SDLKey) roster[number].down),
                               SDL_GetKeyName((SDLKey) roster[number].roll));
-                frost->printf(170, 114, "Power [%s]\nBombs [%s]\nGuns [%s]\n", SDL_GetKeyName((SDLKey) roster[number].power),
-                              SDL_GetKeyName((SDLKey) roster[number].bombs), SDL_GetKeyName((SDLKey) roster[number].guns));
+                frost->printf(170, 114, "Power [%s]\nTurbo [%s]\nBombs [%s]\nGuns [%s]\n", SDL_GetKeyName((SDLKey) roster[number].power),
+                              SDL_GetKeyName((SDLKey) roster[number].turbo), SDL_GetKeyName((SDLKey) roster[number].bombs), SDL_GetKeyName((SDLKey) roster[number].guns));
 
             }
         } else {
@@ -954,10 +954,11 @@ void roster_menu(void) {
 
                 roster[number].up = SDLK_x;
                 roster[number].down = SDLK_w;
-                roster[number].roll = SDLK_s;
+                roster[number].roll = SDLK_a;
                 roster[number].power = SDLK_TAB;
                 roster[number].guns = SDLK_2;
                 roster[number].bombs = SDLK_1;
+                roster[number].turbo = SDLK_s;
 
                 grid2->scanf(125, 50, roster[number].pilotname, 21);
                 if (!roster[number].pilotname[0]) {
@@ -1051,6 +1052,15 @@ void roster_menu(void) {
                 do_all();
 
                 roster[number].guns = select_key(number, roster[number].guns);
+
+
+				rosteri->blit(0, 0);
+
+                frost->printf(125, 100, "Key for turbo[%s]", SDL_GetKeyName((SDLKey) roster[number].turbo));
+                do_all();
+
+                roster[number].turbo = select_key(number, roster[number].turbo);
+
                 break;
 
             case 5:
@@ -1103,6 +1113,7 @@ void roster_menu(void) {
                     roster[l - 1].power = roster[l].power;
                     roster[l - 1].guns = roster[l].guns;
                     roster[l - 1].bombs = roster[l].bombs;
+                    roster[l - 1].turbo = roster[l].turbo;
 
 
                     l++;
@@ -1989,6 +2000,7 @@ static void joystick_setup(int joy, Bitmap * controlme) {
         "Guns", &joystick_config[joy].guns}, {
         "Bombs", &joystick_config[joy].bombs}, {
         "Brake", &joystick_config[joy].brake}, {
+        "Turbo", &joystick_config[joy].turbo}, {
         NULL, NULL}
     };
 
@@ -2132,8 +2144,8 @@ void controls_menu(void) {
             frost->printf(170, 93, "Up [%s] Down [%s] Roll [%s]",
                           SDL_GetKeyName((SDLKey) player_keys[active].up), SDL_GetKeyName((SDLKey) player_keys[active].down),
                           SDL_GetKeyName((SDLKey) player_keys[active].roll));
-            frost->printf(170, 100, "Power [%s] Bombs [%s] Guns [%s]", SDL_GetKeyName((SDLKey) player_keys[active].power),
-                          SDL_GetKeyName((SDLKey) player_keys[active].bombs), SDL_GetKeyName((SDLKey) player_keys[active].guns));
+            frost->printf(170, 100, "Power [%s] Turbo [%s] Bombs [%s] Guns [%s]", SDL_GetKeyName((SDLKey) player_keys[active].power),
+                          SDL_GetKeyName((SDLKey) player_keys[active].turbo), SDL_GetKeyName((SDLKey) player_keys[active].bombs), SDL_GetKeyName((SDLKey) player_keys[active].guns));
         } else {
             int joy = (config.joystick[0] == active) ? 0 : 1;
             char *ups = get_joy_action_string(&joystick_config[joy].up);
@@ -2143,6 +2155,7 @@ void controls_menu(void) {
             char *gunss = get_joy_action_string(&joystick_config[joy].guns);
             char *bombss = get_joy_action_string(&joystick_config[joy].bombs);
             char *brakes = get_joy_action_string(&joystick_config[joy].brake);
+            char *turbos= get_joy_action_string(&joystick_config[joy].turbo);
 
             frost->printf(170, 93, "J%d: Up [%s] Down [%s] Roll [%s]", joy + 1, ups, downs, rolls);
             frost->printf(170, 100, "Pwr [%s] Bmb [%s] Gun [%s] Brk [%s]", powers, bombss, gunss, brakes);
@@ -2154,6 +2167,7 @@ void controls_menu(void) {
             wfree(gunss);
             wfree(bombss);
             wfree(brakes);
+            wfree(turbos);
         }
 
         cursor->blit(x - 10, y - 10);
@@ -2217,6 +2231,14 @@ void controls_menu(void) {
                 do_all();
 
                 player_keys[active].guns = select_key(active, player_keys[active].guns);
+
+                controlme->blit(0, 0);
+                napp[active]->blit((active % 2) * 27 + 10, (active / 2) * 23 + 22);
+                frost->printf(56, 97, "Key for turbo [%s]", SDL_GetKeyName((SDLKey) player_keys[active].turbo));
+                do_all();
+
+                player_keys[active].turbo = select_key(active, player_keys[active].turbo);
+
 
                 save_keyset();
                 break;
@@ -2883,10 +2905,11 @@ int kangas_menu(void) {
 
     wait_mouse_relase();
 
-    init_vga("PALET5");
 
     if (exit_flag == 2)
+	{
         return 1;
+	}
     else
         return 0;
 }
@@ -3225,6 +3248,7 @@ void main_menu(void) {
                     mc_power[mc_c] = 0;
                     mc_bomb[mc_c] = 0;
                     mc_guns[mc_c] = 0;
+                    mc_turbo[mc_c] = 0;
                 }
 
                 full_seed = time(0);
