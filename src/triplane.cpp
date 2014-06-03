@@ -1009,10 +1009,10 @@ void controls(void) {
                 do_ai(l);
                 continue;
             }
-			else
+			else if (computer_active[l] == 2)
 			{
-				//do_agent(l);
-				//continue;
+				do_agent(l);		//turns ai bot on or off
+				continue;
 			}
 
             if (l > 7)
@@ -3460,7 +3460,7 @@ void init_data(void) {
                     computer_active[l] = 1;
 
                 } else {
-                    computer_active[l] = 0;
+                    computer_active[l] = 2;
                 }
 
             }
